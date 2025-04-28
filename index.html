@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <title>Энциклопедия Типов Людей</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        .type { margin: 10px 0; }
-        .admin-section { margin-top: 30px; padding: 20px; border: 1px solid #ccc; background: #f9f9f9; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
+        h1 { color: #007BFF; text-align: center; }
+        .type { margin: 10px 0; background-color: #fff; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .type a { text-decoration: none; color: #007BFF; font-weight: bold; }
+        .type a:hover { text-decoration: underline; }
+        .delete-btn { background-color: #FF4C4C; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .delete-btn:hover { background-color: #D43F3F; }
+        .admin-section { margin-top: 30px; padding: 20px; border: 1px solid #ccc; background: #fff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .hidden { display: none; }
-        input, textarea, button { margin: 5px 0; padding: 8px; width: 100%; max-width: 400px; }
-        .type-detail { margin: 20px 0; }
+        input, textarea, button { margin: 5px 0; padding: 10px; width: 100%; max-width: 400px; border-radius: 5px; border: 1px solid #ccc; }
+        .type-detail { margin: 20px 0; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         /* Кнопка для открытия админки */
         #open-admin-btn {
             position: fixed;
@@ -55,15 +59,10 @@
 
 <script>
 const password = "admin123";
-
-// Пытаемся загрузить сохранённые типы
-let types = JSON.parse(localStorage.getItem('types')) || [
-
+let types = [
+    { id: 1, name: "Экстраверт", description: "Общительный и энергичный человек." },
+    { id: 2, name: "Интроверт", description: "Предпочитает уединение и глубокое размышление." }
 ];
-
-function saveTypes() {
-    localStorage.setItem('types', JSON.stringify(types));
-}
 
 function renderTypes() {
     const list = document.getElementById('types-list');
@@ -71,7 +70,10 @@ function renderTypes() {
     types.forEach(t => {
         const div = document.createElement('div');
         div.className = 'type';
-        div.innerHTML = `<a href=\"#\" onclick=\"showType(${t.id})\">${t.name}</a>`;
+        div.innerHTML = `
+            <a href="#" onclick="showType(${t.id})">${t.name}</a>
+            <button class="delete-btn" onclick="deleteType(${t.id})">Удалить</button>
+        `;
         list.appendChild(div);
     });
 }
@@ -96,13 +98,17 @@ function addType() {
     const description = document.getElementById('new-description').value.trim();
     if (name && description) {
         types.push({ id: Date.now(), name, description });
-        saveTypes();  // <<< ДОБАВЛЯЕМ СОХРАНЕНИЕ
         renderTypes();
         document.getElementById('new-name').value = '';
         document.getElementById('new-description').value = '';
     } else {
         alert('Заполните все поля!');
     }
+}
+
+function deleteType(id) {
+    types = types.filter(t => t.id !== id);
+    renderTypes();
 }
 
 function showType(id) {
