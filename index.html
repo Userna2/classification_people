@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const adminBtn = document.getElementById('open-admin-btn');
         const adminLoginBtn = document.getElementById('admin-login-btn');
         
-        if (!adminSection.contains(event.target) {
+        if (!adminSection.contains(event.target)) {
             if (event.target !== adminBtn && event.target !== adminLoginBtn) {
                 adminSection.classList.add('hidden');
             }
