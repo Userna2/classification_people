@@ -3,6 +3,7 @@
 <head>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <meta charset="UTF-8">
     <title>Энциклопедия Типов Людей</title>
     <style>
@@ -200,7 +201,6 @@
 </div>
 
 <script>
-const password = "admin123";
 const firebaseConfig = {
     apiKey: "AIzaSyDqbfJgHPeD_a9utUczHKTJLp928pTFCF0",
     authDomain: "people-types-encyclopedia.firebaseapp.com",
@@ -291,20 +291,30 @@ function toggleAdmin() {
 
 function loginAdmin() {
     const input = document.getElementById('admin-password').value;
-    console.log('Введённый пароль:', input);
-    if (input === password) {
-        console.log('Пароль верный, установка isAdmin = true');
-        isAdmin = true;
-        document.getElementById('admin-login').classList.add('hidden');
-        document.getElementById('admin-panel').classList.remove('hidden');
-        document.getElementById('open-admin-btn').style.display = 'block';
-        document.getElementById('admin-login-btn').classList.add('hidden');
-        console.log('isAdmin после входа:', isAdmin);
-        renderTypes();
-    } else {
-        console.log('Неверный пароль:', input);
-        alert('Неверный пароль!');
-    }
+    const inputHash = CryptoJS.SHA256(input).toString(CryptoJS.enc.Hex);
+    console.log('Введённый пароль (хэш):', inputHash);
+    
+    database.ref('admin/credentials/passwordHash').once('value')
+        .then(snapshot => {
+            const storedHash = snapshot.val();
+            if (inputHash === storedHash) {
+                console.log('Пароль верный, установка isAdmin = true');
+                isAdmin = true;
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                document.getElementById('open-admin-btn').style.display = 'block';
+                document.getElementById('admin-login-btn').classList.add('hidden');
+                console.log('isAdmin после входа:', isAdmin);
+                renderTypes();
+            } else {
+                console.log('Неверный пароль (хэш):', inputHash);
+                alert('Неверный пароль!');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки пароля:', error);
+            alert('Ошибка сервера. Попробуйте позже.');
+        });
 }
 
 function addType() {
