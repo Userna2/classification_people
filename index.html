@@ -18,7 +18,7 @@
         h1 {
             text-align: center;
             margin: 20px 0;
-            color: #4A90E2;
+            color: #181818;
         }
 
         .container {
@@ -305,7 +305,7 @@
             div.innerHTML = `
                 <div class="type-header">
                     <div class="type-name">${t.name}</div>
-                    ${isAdmin ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteType(${t.id})">Удалить</button>` : ''}
+                    ${isAdmin ? `<button class="delete-btn" onclick="deleteType(${t.id}, event)">Удалить</button>` : ''}
                 </div>
                 <div class="type-content" id="content-${t.id}">
                     <p>${t.description}</p>
@@ -394,8 +394,8 @@
         }
     }
     
-    // Удаление типа
-    function deleteType(id) {
+    function deleteType(id, event) {
+        if (event) event.stopPropagation();
         if (!isAdmin) {
             alert('Только администратор может удалять типы!');
             return;
