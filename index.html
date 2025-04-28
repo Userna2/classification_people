@@ -210,7 +210,8 @@ const firebaseConfig = {
     messagingSenderId: "1025026064128",
     appId: "1:1025026064128:web:b88dfdb034bd040af9bde5",
     measurementId: "G-4Y3G43VB1G"
-    };
+};
+
 // Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
@@ -222,8 +223,9 @@ let isAdmin = false;
 function loadTypes() {
     database.ref('types').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        types = Object.values(data); // Преобразуем объект в массив
-        types.sort((a, b) => a.name.localeCompare(b.name)); // Сортируем по названию
+        types = Object.values(data);
+        console.log('Загруженные типы:', types);
+        types.sort((a, b) => a.name.localeCompare(b.name));
         renderTypes();
     });
 }
@@ -237,6 +239,7 @@ function saveTypes() {
 }
 
 function renderTypes(filter = '') {
+    console.log('Рендеринг типов, isAdmin:', isAdmin);
     const list = document.getElementById('types-list');
     list.innerHTML = '';
     
@@ -288,14 +291,18 @@ function toggleAdmin() {
 
 function loginAdmin() {
     const input = document.getElementById('admin-password').value;
+    console.log('Введённый пароль:', input);
     if (input === password) {
+        console.log('Пароль верный, установка isAdmin = true');
         isAdmin = true;
         document.getElementById('admin-login').classList.add('hidden');
         document.getElementById('admin-panel').classList.remove('hidden');
         document.getElementById('open-admin-btn').style.display = 'block';
         document.getElementById('admin-login-btn').classList.add('hidden');
+        console.log('isAdmin после входа:', isAdmin);
         renderTypes();
     } else {
+        console.log('Неверный пароль:', input);
         alert('Неверный пароль!');
     }
 }
@@ -322,7 +329,6 @@ function addType() {
                     image: event.target.result 
                 };
                 types.push(newType);
-                // Сортировка после добавления
                 types.sort((a, b) => a.name.localeCompare(b.name));
                 saveTypes();
                 renderTypes();
@@ -339,7 +345,6 @@ function addType() {
                 image: null 
             };
             types.push(newType);
-            // Сортировка после добавления
             types.sort((a, b) => a.name.localeCompare(b.name));
             saveTypes();
             renderTypes();
@@ -365,7 +370,7 @@ function deleteType(id) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadTypes(); // Загружаем данные из Firebase
+    loadTypes();
     
     document.addEventListener('click', function(event) {
         const adminSection = document.getElementById('admin-section');
@@ -380,6 +385,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 </body>
 </html>
