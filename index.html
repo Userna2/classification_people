@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <meta charset="UTF-8">
@@ -18,7 +17,7 @@
         h1 {
             text-align: center;
             margin: 20px 0;
-            color: #181818;
+            color: #4A90E2;
         }
 
         .container {
@@ -201,188 +200,157 @@
 </div>
 
 <script>
-    // Конфигурация Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDqbfJgHPeD_a9utUczHKTJLp928pTFCF0",
-      authDomain: "people-types-encyclopedia.firebaseapp.com",
-      databaseURL: "https://people-types-encyclopedia-default-rtdb.firebaseio.com",
-      projectId: "people-types-encyclopedia",
-      storageBucket: "people-types-encyclopedia.firebasestorage.app",
-      messagingSenderId: "1025026064128",
-      appId: "1:1025026064128:web:b88dfdb034bd040af9bde5",
-      measurementId: "G-4Y3G43VB1G"
-    };
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDqbfJgHPeD_a9utUczHKTJLp928pTFCF0",
+  authDomain: "people-types-encyclopedia.firebaseapp.com",
+  databaseURL: "https://people-types-encyclopedia-default-rtdb.firebaseio.com",
+  projectId: "people-types-encyclopedia",
+  storageBucket: "people-types-encyclopedia.firebasestorage.app",
+  messagingSenderId: "1025026064128",
+  appId: "1:1025026064128:web:b88dfdb034bd040af9bde5",
+  measurementId: "G-4Y3G43VB1G"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+// Инициализация Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+const password = "admin123"; // Пароль для админ-панели
+let types = []; // Здесь будут храниться типы людей
+let isAdmin = false; // Флаг админа
+
+// ========================
+// Firebase-функции
+// ========================
+
+function saveTypes() {
+    // Сохраняем данные в Firebase
+    database.ref('peopleTypes').set(types)
+        .then(() => console.log("Данные сохранены в Firebase!"))
+        .catch((error) => console.error("Ошибка сохранения:", error));
+}
+
+function loadTypes(callback) {
+    // Загружаем данные из Firebase
+    database.ref('peopleTypes').on('value', (snapshot) => {
+        types = snapshot.val() || [
+            // Стандартные данные, если база пуста
+            { 
+                id: 1, 
+                name: "Экстраверт", 
+                description: "Общительный и энергичный человек.", 
+                image: "https://via.placeholder.com/800x400" 
+            },
+            { 
+                id: 2, 
+                name: "Интроверт", 
+                description: "Предпочитает уединение и глубокое размышление.",
+                image: null
+            }
+        ];
+        // Сортируем по алфавиту
+        types.sort((a, b) => a.name.localeCompare(b.name));
+        if (callback) callback();
+    });
+}
+
+// ========================
+// Основные функции
+// ========================
+
+function renderTypes(filter = '') {
+    const list = document.getElementById('types-list');
+    list.innerHTML = '';
     
-    // Инициализация Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const filteredTypes = filter 
+        ? types.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()))
+        : types;
     
-    // Хэш пароля (SHA-256 от "ваш_пароль")
-    const passwordHash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"; 
-    
-    let types = [];
-    let isAdmin = false;
-    
-    // Проверяем авторизацию при загрузке
-    function checkAdmin() {
-        if (sessionStorage.getItem('adminHash') === passwordHash) {
-            isAdmin = true;
-            toggleAdminPanel();
-        }
-    }
-    
-    // Вход администратора
-    function loginAdmin() {
-        const input = document.getElementById('admin-password').value;
-        const inputHash = sha256(input);
-        
-        if (inputHash === passwordHash) {
-            sessionStorage.setItem('adminHash', passwordHash);
-            isAdmin = true;
-            toggleAdminPanel();
-        } else {
-            alert('Неверный пароль!');
-        }
-    }
-    
-    // Выход администратора
-    function logoutAdmin() {
-        sessionStorage.removeItem('adminHash');
-        isAdmin = false;
-        location.reload();
-    }
-    
-    // Переключение админ-панели
-    function toggleAdminPanel() {
+    filteredTypes.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'type';
+        div.setAttribute('data-id', t.id);
+        div.innerHTML = `
+            <div class="type-header">
+                <div class="type-name">${t.name}</div>
+                ${isAdmin ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteType(${t.id})">Удалить</button>` : ''}
+            </div>
+            <div class="type-content" id="content-${t.id}">
+                <p>${t.description}</p>
+                ${t.image ? `<img src="${t.image}" alt="${t.name}">` : ''}
+            </div>
+        `;
+        div.addEventListener('click', () => toggleTypeContent(t.id));
+        list.appendChild(div);
+    });
+}
+
+function toggleTypeContent(id) {
+    const content = document.getElementById(`content-${id}`);
+    content.classList.toggle('active');
+}
+
+function filterTypes() {
+    const searchText = document.getElementById('search-input').value;
+    renderTypes(searchText);
+}
+
+function showAdminLogin() {
+    document.getElementById('admin-section').classList.remove('hidden');
+    document.getElementById('admin-login').classList.remove('hidden');
+    document.getElementById('admin-panel').classList.add('hidden');
+}
+
+function toggleAdmin() {
+    const admin = document.getElementById('admin-section');
+    admin.classList.toggle('hidden');
+}
+
+function loginAdmin() {
+    const input = document.getElementById('admin-password').value;
+    if (input === password) {
+        isAdmin = true;
         document.getElementById('admin-login').classList.add('hidden');
         document.getElementById('admin-panel').classList.remove('hidden');
         document.getElementById('open-admin-btn').style.display = 'block';
         document.getElementById('admin-login-btn').classList.add('hidden');
+        renderTypes();
+        alert("Вы вошли как администратор!");
+    } else {
+        alert('Неверный пароль!');
     }
-    
-    // Сохранение данных в Firebase
-    function saveTypes() {
-        database.ref('peopleTypes').set(types)
-            .then(() => console.log("Данные сохранены в Firebase!"))
-            .catch((error) => console.error("Ошибка сохранения:", error));
+}
+
+function addType() {
+    if (!isAdmin) {
+        alert('Только администратор может добавлять новые типы!');
+        return;
     }
-    
-    // Загрузка данных из Firebase
-    function loadTypes(callback) {
-        database.ref('peopleTypes').on('value', (snapshot) => {
-            types = snapshot.val() || [
-                { 
-                    id: 1, 
-                    name: "Экстраверт", 
-                    description: "Общительный и энергичный человек.", 
-                    image: "https://via.placeholder.com/800x400" 
-                },
-                { 
-                    id: 2, 
-                    name: "Интроверт", 
-                    description: "Предпочитает уединение и глубокое размышление.",
-                    image: null
-                }
-            ];
-            types.sort((a, b) => a.name.localeCompare(b.name));
-            if (callback) callback();
-        });
+
+    const name = document.getElementById('new-name').value.trim();
+    const description = document.getElementById('new-description').value.trim();
+    const imageInput = document.getElementById('new-image');
+    const imageFile = imageInput.files[0];
+
+    if (!name || !description) {
+        alert('Заполните обязательные поля (название и описание)!');
+        return;
     }
-    
-    // Отрисовка типов
-    function renderTypes(filter = '') {
-        const list = document.getElementById('types-list');
-        list.innerHTML = '';
-        
-        const filteredTypes = filter 
-            ? types.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()))
-            : types;
-        
-        filteredTypes.forEach(t => {
-            const div = document.createElement('div');
-            div.className = 'type';
-            div.setAttribute('data-id', t.id);
-            div.innerHTML = `
-                <div class="type-header">
-                    <div class="type-name">${t.name}</div>
-                    ${isAdmin ? `<button class="delete-btn" onclick="deleteType(${t.id}, event)">Удалить</button>` : ''}
-                </div>
-                <div class="type-content" id="content-${t.id}">
-                    <p>${t.description}</p>
-                    ${t.image ? `<img src="${t.image}" alt="${t.name}">` : ''}
-                </div>
-            `;
-            div.addEventListener('click', () => toggleTypeContent(t.id));
-            list.appendChild(div);
-        });
-    }
-    
-    // Переключение содержимого типа
-    function toggleTypeContent(id) {
-        const content = document.getElementById(`content-${id}`);
-        content.classList.toggle('active');
-    }
-    
-    // Фильтрация типов
-    function filterTypes() {
-        const searchText = document.getElementById('search-input').value;
-        renderTypes(searchText);
-    }
-    
-    // Показать форму входа
-    function showAdminLogin() {
-        document.getElementById('admin-section').classList.remove('hidden');
-        document.getElementById('admin-login').classList.remove('hidden');
-        document.getElementById('admin-panel').classList.add('hidden');
-    }
-    
-    // Переключение админ-панели
-    function toggleAdmin() {
-        const admin = document.getElementById('admin-section');
-        admin.classList.toggle('hidden');
-    }
-    
-    // Добавление нового типа
-    function addType() {
-        if (!isAdmin) {
-            alert('Только администратор может добавлять новые типы!');
-            return;
-        }
-    
-        const name = document.getElementById('new-name').value.trim();
-        const description = document.getElementById('new-description').value.trim();
-        const imageInput = document.getElementById('new-image');
-        const imageFile = imageInput.files[0];
-    
-        if (!name || !description) {
-            alert('Заполните обязательные поля (название и описание)!');
-            return;
-        }
-    
-        if (imageFile) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const newType = { 
-                    id: Date.now(), 
-                    name, 
-                    description, 
-                    image: event.target.result 
-                };
-                types.push(newType);
-                types.sort((a, b) => a.name.localeCompare(b.name));
-                saveTypes();
-                renderTypes();
-                document.getElementById('new-name').value = '';
-                document.getElementById('new-description').value = '';
-                imageInput.value = '';
-            };
-            reader.readAsDataURL(imageFile);
-        } else {
+
+    if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
             const newType = { 
                 id: Date.now(), 
                 name, 
                 description, 
-                image: null 
+                image: event.target.result 
             };
             types.push(newType);
             types.sort((a, b) => a.name.localeCompare(b.name));
@@ -391,39 +359,57 @@
             document.getElementById('new-name').value = '';
             document.getElementById('new-description').value = '';
             imageInput.value = '';
-        }
+        };
+        reader.readAsDataURL(imageFile);
+    } else {
+        const newType = { 
+            id: Date.now(), 
+            name, 
+            description, 
+            image: null 
+        };
+        types.push(newType);
+        types.sort((a, b) => a.name.localeCompare(b.name));
+        saveTypes();
+        renderTypes();
+        document.getElementById('new-name').value = '';
+        document.getElementById('new-description').value = '';
+        imageInput.value = '';
     }
-    
-    function deleteType(id, event) {
-        if (event) event.stopPropagation();
-        if (!isAdmin) {
-            alert('Только администратор может удалять типы!');
-            return;
-        }
-        if (confirm('Вы уверены, что хотите удалить этот тип?')) {
-            types = types.filter(t => t.id !== id);
-            saveTypes();
-            renderTypes();
-        }
+}
+
+function deleteType(id) {
+    if (!isAdmin) {
+        alert('Только администратор может удалять типы!');
+        return;
     }
+    if (confirm('Вы уверены, что хотите удалить этот тип?')) {
+        types = types.filter(t => t.id !== id);
+        saveTypes();
+        renderTypes();
+    }
+}
+
+// ========================
+// Инициализация при загрузке
+// ========================
+document.addEventListener('DOMContentLoaded', function() {
+    // Загружаем данные из Firebase и рендерим
+    loadTypes(renderTypes);
     
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        checkAdmin();
-        loadTypes(renderTypes);
+    // Закрытие админ-панели при клике вне её
+    document.addEventListener('click', function(event) {
+        const adminSection = document.getElementById('admin-section');
+        const adminBtn = document.getElementById('open-admin-btn');
+        const adminLoginBtn = document.getElementById('admin-login-btn');
         
-        document.addEventListener('click', function(event) {
-            const adminSection = document.getElementById('admin-section');
-            const adminBtn = document.getElementById('open-admin-btn');
-            const adminLoginBtn = document.getElementById('admin-login-btn');
-            
-            if (!adminSection.contains(event.target)) {
-                if (event.target !== adminBtn && event.target !== adminLoginBtn) {
-                    adminSection.classList.add('hidden');
-                }
+        if (!adminSection.contains(event.target)) {
+            if (event.target !== adminBtn && event.target !== adminLoginBtn) {
+                adminSection.classList.add('hidden');
             }
-        });
+        }
     });
+});
 </script>
-</html>
 </body>
+</html>
