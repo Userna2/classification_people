@@ -30,10 +30,8 @@
             margin: 10px 0;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .type:hover {
@@ -41,15 +39,17 @@
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
         }
 
-        .type a {
-            text-decoration: none;
+        .type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .type-name {
             color: #007BFF;
             font-weight: bold;
             font-size: 18px;
-        }
-
-        .type a:hover {
-            text-decoration: underline;
+            flex-grow: 1;
         }
 
         .delete-btn {
@@ -60,6 +60,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            margin-left: 10px;
         }
 
         .delete-btn:hover {
@@ -72,10 +73,9 @@
             border-radius: 10px;
             background-color: #ffffff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            display: none;
         }
 
-        .admin-section input, .admin-section textarea, .admin-section button {
+        .admin-section input, .admin-section textarea, .admin-section button, .admin-section input[type="file"] {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -108,31 +108,81 @@
             font-size: 24px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            display: none;
         }
 
-        .type-detail {
-            background-color: #fff;
-            padding: 20px;
+        .type-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .type-content.active {
+            max-height: 1000px;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .type img {
+            max-width: 100%;
+            height: auto;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
+        .hidden {
+            display: none;
+        }
+
+        .admin-login-btn {
+            background-color: transparent;
+            color: #4A90E2;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 14px;
+        }
+
+        .admin-login-btn:hover {
+            text-decoration: underline;
+        }
+
+        .search-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        #search-input {
+            width: 60%;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Типы Людей</h1>
+    <button id="admin-login-btn" class="admin-login-btn" onclick="showAdminLogin()">Админ</button>
+    <h1>Энциклопедия Типов Людей</h1>
+    
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Поиск по типам..." oninput="filterTypes()">
+    </div>
+    
     <div id="types-list"></div>
-    <div id="type-detail" class="type-detail hidden"></div>
 </div>
 
 <!-- Кнопка для админки -->
 <button id="open-admin-btn" onclick="toggleAdmin()">⚙️</button>
 
 <!-- Админ-панель -->
-<div id="admin-section" class="admin-section">
+<div id="admin-section" class="admin-section hidden">
     <h2>Админ-панель</h2>
     <div id="admin-login">
         <input type="password" id="admin-password" placeholder="Введите пароль">
@@ -142,46 +192,85 @@
         <h3>Добавить новый тип:</h3>
         <input type="text" id="new-name" placeholder="Название типа">
         <textarea id="new-description" placeholder="Описание типа"></textarea>
+        <input type="file" id="new-image" accept="image/*">
         <button onclick="addType()">Добавить</button>
     </div>
 </div>
 
 <script>
 const password = "admin123";
-let types = [
-    { id: 1, name: "Экстраверт", description: "Общительный и энергичный человек." },
+let types = JSON.parse(localStorage.getItem('peopleTypes')) || [
+    { id: 1, name: "Экстраверт", description: "Общительный и энергичный человек.", image: "https://via.placeholder.com/800x400" },
     { id: 2, name: "Интроверт", description: "Предпочитает уединение и глубокое размышление." }
 ];
 
 let isAdmin = false;  // Флаг, определяющий, вошел ли админ
 
-function renderTypes() {
+// Сортировка по алфавиту при загрузке
+types.sort((a, b) => a.name.localeCompare(b.name));
+
+function saveTypes() {
+    localStorage.setItem('peopleTypes', JSON.stringify(types));
+}
+
+function renderTypes(filter = '') {
     const list = document.getElementById('types-list');
     list.innerHTML = '';
-    types.forEach(t => {
+    
+    const filteredTypes = filter 
+        ? types.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()))
+        : types;
+    
+    filteredTypes.forEach(t => {
         const div = document.createElement('div');
         div.className = 'type';
+        div.setAttribute('data-id', t.id);
         div.innerHTML = `
-            <div>
-                <a href="#" onclick="showType(${t.id})">${t.name}</a>
+            <div class="type-header">
+                <div class="type-name">${t.name}</div>
+                ${isAdmin ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteType(${t.id})">Удалить</button>` : ''}
             </div>
-            ${isAdmin ? `<button class="delete-btn" onclick="deleteType(${t.id})">Удалить</button>` : ''}
+            <div class="type-content" id="content-${t.id}">
+                <p>${t.description}</p>
+                ${t.image ? `<img src="${t.image}" alt="${t.name}">` : ''}
+            </div>
         `;
+        div.addEventListener('click', function() {
+            toggleTypeContent(t.id);
+        });
         list.appendChild(div);
     });
 }
 
+function toggleTypeContent(id) {
+    const content = document.getElementById(`content-${id}`);
+    content.classList.toggle('active');
+}
+
+function filterTypes() {
+    const searchText = document.getElementById('search-input').value;
+    renderTypes(searchText);
+}
+
+function showAdminLogin() {
+    document.getElementById('admin-section').classList.remove('hidden');
+    document.getElementById('admin-login').classList.remove('hidden');
+    document.getElementById('admin-panel').classList.add('hidden');
+}
+
 function toggleAdmin() {
     const admin = document.getElementById('admin-section');
-    admin.style.display = admin.style.display === 'block' ? 'none' : 'block';
+    admin.classList.toggle('hidden');
 }
 
 function loginAdmin() {
     const input = document.getElementById('admin-password').value;
     if (input === password) {
         isAdmin = true;
-        document.getElementById('admin-login').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'block';
+        document.getElementById('admin-login').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        document.getElementById('open-admin-btn').style.display = 'block';
+        document.getElementById('admin-login-btn').classList.add('hidden');
         renderTypes();
     } else {
         alert('Неверный пароль!');
@@ -189,33 +278,86 @@ function loginAdmin() {
 }
 
 function addType() {
+    if (!isAdmin) {
+        alert('Только администратор может добавлять новые типы!');
+        return;
+    }
+
     const name = document.getElementById('new-name').value.trim();
     const description = document.getElementById('new-description').value.trim();
+    const imageInput = document.getElementById('new-image');
+    const imageFile = imageInput.files[0];
+
     if (name && description) {
-        types.push({ id: Date.now(), name, description });
-        renderTypes();
-        document.getElementById('new-name').value = '';
-        document.getElementById('new-description').value = '';
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const newType = { 
+                    id: Date.now(), 
+                    name, 
+                    description, 
+                    image: event.target.result 
+                };
+                types.push(newType);
+                // Сортировка после добавления
+                types.sort((a, b) => a.name.localeCompare(b.name));
+                saveTypes();
+                renderTypes();
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-description').value = '';
+                imageInput.value = '';
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            const newType = { 
+                id: Date.now(), 
+                name, 
+                description, 
+                image: null 
+            };
+            types.push(newType);
+            // Сортировка после добавления
+            types.sort((a, b) => a.name.localeCompare(b.name));
+            saveTypes();
+            renderTypes();
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-description').value = '';
+            imageInput.value = '';
+        }
     } else {
-        alert('Заполните все поля!');
+        alert('Заполните обязательные поля (название и описание)!');
     }
 }
 
 function deleteType(id) {
-    types = types.filter(t => t.id !== id);
-    renderTypes();
-}
-
-function showType(id) {
-    const t = types.find(x => x.id === id);
-    const detail = document.getElementById('type-detail');
-    if (t) {
-        detail.classList.remove('hidden');
-        detail.innerHTML = `<h2>${t.name}</h2><p>${t.description}</p>`;
+    if (!isAdmin) {
+        alert('Только администратор может удалять типы!');
+        return;
+    }
+    if (confirm('Вы уверены, что хотите удалить этот тип?')) {
+        types = types.filter(t => t.id !== id);
+        saveTypes();
+        renderTypes();
     }
 }
 
-renderTypes();
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    renderTypes();
+    
+    // Закрытие админ-панели при клике вне ее
+    document.addEventListener('click', function(event) {
+        const adminSection = document.getElementById('admin-section');
+        const adminBtn = document.getElementById('open-admin-btn');
+        const adminLoginBtn = document.getElementById('admin-login-btn');
+        
+        if (!adminSection.contains(event.target) {
+            if (event.target !== adminBtn && event.target !== adminLoginBtn) {
+                adminSection.classList.add('hidden');
+            }
+        }
+    });
+});
 </script>
 
 </body>
