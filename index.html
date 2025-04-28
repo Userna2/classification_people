@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <meta charset="UTF-8">
     <title>Энциклопедия Типов Людей</title>
     <style>
@@ -198,18 +200,69 @@
 </div>
 
 <script>
-const password = "admin123";
-let types = JSON.parse(localStorage.getItem('peopleTypes')) || [
-];
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDqbfJgHPeD_a9utUczHKTJLp928pTFCF0",
+  authDomain: "people-types-encyclopedia.firebaseapp.com",
+  databaseURL: "https://people-types-encyclopedia-default-rtdb.firebaseio.com",
+  projectId: "people-types-encyclopedia",
+  storageBucket: "people-types-encyclopedia.firebasestorage.app",
+  messagingSenderId: "1025026064128",
+  appId: "1:1025026064128:web:b88dfdb034bd040af9bde5",
+  measurementId: "G-4Y3G43VB1G"
+};
 
-let isAdmin = false;  // Флаг, определяющий, вошел ли админ
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
-// Сортировка по алфавиту при загрузке
-types.sort((a, b) => a.name.localeCompare(b.name));
+// Инициализация Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+const password = "admin123"; // Пароль для админ-панели
+let types = []; // Здесь будут храниться типы людей
+let isAdmin = false; // Флаг админа
+
+// ========================
+// Firebase-функции
+// ========================
 
 function saveTypes() {
-    localStorage.setItem('peopleTypes', JSON.stringify(types));
+    // Сохраняем данные в Firebase
+    database.ref('peopleTypes').set(types)
+        .then(() => console.log("Данные сохранены в Firebase!"))
+        .catch((error) => console.error("Ошибка сохранения:", error));
 }
+
+function loadTypes(callback) {
+    // Загружаем данные из Firebase
+    database.ref('peopleTypes').on('value', (snapshot) => {
+        types = snapshot.val() || [
+            // Стандартные данные, если база пуста
+            { 
+                id: 1, 
+                name: "Экстраверт", 
+                description: "Общительный и энергичный человек.", 
+                image: "https://via.placeholder.com/800x400" 
+            },
+            { 
+                id: 2, 
+                name: "Интроверт", 
+                description: "Предпочитает уединение и глубокое размышление.",
+                image: null
+            }
+        ];
+        // Сортируем по алфавиту
+        types.sort((a, b) => a.name.localeCompare(b.name));
+        if (callback) callback();
+    });
+}
+
+// ========================
+// Основные функции
+// ========================
 
 function renderTypes(filter = '') {
     const list = document.getElementById('types-list');
@@ -233,9 +286,7 @@ function renderTypes(filter = '') {
                 ${t.image ? `<img src="${t.image}" alt="${t.name}">` : ''}
             </div>
         `;
-        div.addEventListener('click', function() {
-            toggleTypeContent(t.id);
-        });
+        div.addEventListener('click', () => toggleTypeContent(t.id));
         list.appendChild(div);
     });
 }
@@ -270,6 +321,7 @@ function loginAdmin() {
         document.getElementById('open-admin-btn').style.display = 'block';
         document.getElementById('admin-login-btn').classList.add('hidden');
         renderTypes();
+        alert("Вы вошли как администратор!");
     } else {
         alert('Неверный пароль!');
     }
@@ -286,44 +338,43 @@ function addType() {
     const imageInput = document.getElementById('new-image');
     const imageFile = imageInput.files[0];
 
-    if (name && description) {
-        if (imageFile) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const newType = { 
-                    id: Date.now(), 
-                    name, 
-                    description, 
-                    image: event.target.result 
-                };
-                types.push(newType);
-                // Сортировка после добавления
-                types.sort((a, b) => a.name.localeCompare(b.name));
-                saveTypes();
-                renderTypes();
-                document.getElementById('new-name').value = '';
-                document.getElementById('new-description').value = '';
-                imageInput.value = '';
-            };
-            reader.readAsDataURL(imageFile);
-        } else {
+    if (!name || !description) {
+        alert('Заполните обязательные поля (название и описание)!');
+        return;
+    }
+
+    if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
             const newType = { 
                 id: Date.now(), 
                 name, 
                 description, 
-                image: null 
+                image: event.target.result 
             };
             types.push(newType);
-            // Сортировка после добавления
             types.sort((a, b) => a.name.localeCompare(b.name));
             saveTypes();
             renderTypes();
             document.getElementById('new-name').value = '';
             document.getElementById('new-description').value = '';
             imageInput.value = '';
-        }
+        };
+        reader.readAsDataURL(imageFile);
     } else {
-        alert('Заполните обязательные поля (название и описание)!');
+        const newType = { 
+            id: Date.now(), 
+            name, 
+            description, 
+            image: null 
+        };
+        types.push(newType);
+        types.sort((a, b) => a.name.localeCompare(b.name));
+        saveTypes();
+        renderTypes();
+        document.getElementById('new-name').value = '';
+        document.getElementById('new-description').value = '';
+        imageInput.value = '';
     }
 }
 
@@ -339,17 +390,20 @@ function deleteType(id) {
     }
 }
 
+// ========================
 // Инициализация при загрузке
+// ========================
 document.addEventListener('DOMContentLoaded', function() {
-    renderTypes();
+    // Загружаем данные из Firebase и рендерим
+    loadTypes(renderTypes);
     
-    // Закрытие админ-панели при клике вне ее
+    // Закрытие админ-панели при клике вне её
     document.addEventListener('click', function(event) {
         const adminSection = document.getElementById('admin-section');
         const adminBtn = document.getElementById('open-admin-btn');
         const adminLoginBtn = document.getElementById('admin-login-btn');
         
-        if (!adminSection.contains(event.target)) {
+        if (!adminSection.contains(event.target) {
             if (event.target !== adminBtn && event.target !== adminLoginBtn) {
                 adminSection.classList.add('hidden');
             }
@@ -357,6 +411,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 </body>
 </html>
