@@ -309,67 +309,52 @@
         }
         
         function addType() {
-            if (!isAdmin) {
-                alert('Только администратор может добавлять новые типы!');
-                return;
-            }
-        
-            const name = document.getElementById('new-name').value.trim();
-            const description = document.getElementById('new-description').value.trim();
-            const imageInput = document.getElementById('new-image');
-            const imageFile = imageInput.files[0];
-        
-            if (!name || !description) {
-                alert('Заполните обязательные поля (название и описание)!');
-                return;
-            }
-        
-            if (imageFile) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const newType = { 
-                        id: Date.now(), 
-                        name, 
-                        description, 
-                        image: event.target.result 
-                    };
-                    types.push(newType);
-                    types.sort((a, b) => a.name.localeCompare(b.name));
-                    saveTypes();
-                    renderTypes();
-                    document.getElementById('new-name').value = '';
-                    document.getElementById('new-description').value = '';
-                    imageInput.value = '';
-                };
-                reader.readAsDataURL(imageFile);
-            } else {
-                const newType = { 
-                    id: Date.now(), 
-                    name, 
-                    description, 
-                    image: null 
-                };
-                types.push(newType);
-                types.sort((a, b) => a.name.localeCompare(b.name));
-                saveTypes();
-                renderTypes();
-                document.getElementById('new-name').value = '';
-                document.getElementById('new-description').value = '';
-                imageInput.value = '';
-            }
-        }
-        
-        function deleteType(id) {
-            if (!isAdmin) {
-                alert('Только администратор может удалять типы!');
-                return;
-            }
-            if (confirm('Вы уверены, что хотите удалить этот тип?')) {
-                types = types.filter(t => t.id !== id);
-                saveTypes();
-                renderTypes();
-            }
-        }
+    if (!isAdmin) {
+        alert('Только администратор может добавлять новые типы!');
+        return;
+    }
+
+    const name = document.getElementById('new-name').value.trim();
+    const description = document.getElementById('new-description').value.trim();
+    const imageInput = document.getElementById('new-image');
+    const imageFile = imageInput.files[0];
+
+    if (!name || !description) {
+        alert('Заполните обязательные поля (название и описание)!');
+        return;
+    }
+
+    let newType = { 
+        id: Date.now(), 
+        name, 
+        description, 
+        image: null 
+    };
+
+    if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            newType.image = event.target.result;
+            console.log("Новое изображение загружено: ", newType.image);
+            types.push(newType);
+            types.sort((a, b) => a.name.localeCompare(b.name));
+            saveTypes();
+            renderTypes();
+        };
+        reader.readAsDataURL(imageFile);
+    } else {
+        types.push(newType);
+        types.sort((a, b) => a.name.localeCompare(b.name));
+        saveTypes();
+        renderTypes();
+    }
+
+    // Очистка полей
+    document.getElementById('new-name').value = '';
+    document.getElementById('new-description').value = '';
+    imageInput.value = '';
+}
+
         
         // ========================
         // Инициализация при загрузке
