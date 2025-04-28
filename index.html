@@ -4,23 +4,102 @@
     <meta charset="UTF-8">
     <title>Энциклопедия Типов Людей</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
-        h1 { color: #007BFF; text-align: center; }
-        .type { margin: 10px 0; background-color: #fff; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .type a { text-decoration: none; color: #007BFF; font-weight: bold; }
-        .type a:hover { text-decoration: underline; }
-        .delete-btn { background-color: #FF4C4C; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-        .delete-btn:hover { background-color: #D43F3F; }
-        .admin-section { margin-top: 30px; padding: 20px; border: 1px solid #ccc; background: #fff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .hidden { display: none; }
-        input, textarea, button { margin: 5px 0; padding: 10px; width: 100%; max-width: 400px; border-radius: 5px; border: 1px solid #ccc; }
-        .type-detail { margin: 20px 0; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        /* Кнопка для открытия админки */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #4A90E2;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            max-width: 1000px;
+        }
+
+        .type {
+            background-color: #ffffff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .type:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .type a {
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .type a:hover {
+            text-decoration: underline;
+        }
+
+        .delete-btn {
+            background-color: #FF5C5C;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .delete-btn:hover {
+            background-color: #D43F3F;
+        }
+
+        .admin-section {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .admin-section input, .admin-section textarea, .admin-section button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .admin-section button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+
+        .admin-section button:hover {
+            background-color: #45a049;
+        }
+
         #open-admin-btn {
             position: fixed;
             right: 20px;
             bottom: 20px;
-            background-color: #007BFF;
+            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 50%;
@@ -28,20 +107,32 @@
             height: 60px;
             font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
+
+        .type-detail {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
     </style>
 </head>
 <body>
 
-<h1>Типы Людей</h1>
-<div id="types-list"></div>
+<div class="container">
+    <h1>Типы Людей</h1>
+    <div id="types-list"></div>
+    <div id="type-detail" class="type-detail hidden"></div>
+</div>
 
-<!-- Кнопка открытия админки -->
+<!-- Кнопка для админки -->
 <button id="open-admin-btn" onclick="toggleAdmin()">⚙️</button>
 
 <!-- Админ-панель -->
-<div id="admin-section" class="admin-section hidden">
+<div id="admin-section" class="admin-section">
     <h2>Админ-панель</h2>
     <div id="admin-login">
         <input type="password" id="admin-password" placeholder="Введите пароль">
@@ -55,14 +146,14 @@
     </div>
 </div>
 
-<div id="type-detail" class="type-detail hidden"></div>
-
 <script>
 const password = "admin123";
 let types = [
     { id: 1, name: "Экстраверт", description: "Общительный и энергичный человек." },
     { id: 2, name: "Интроверт", description: "Предпочитает уединение и глубокое размышление." }
 ];
+
+let isAdmin = false;  // Флаг, определяющий, вошел ли админ
 
 function renderTypes() {
     const list = document.getElementById('types-list');
@@ -71,8 +162,10 @@ function renderTypes() {
         const div = document.createElement('div');
         div.className = 'type';
         div.innerHTML = `
-            <a href="#" onclick="showType(${t.id})">${t.name}</a>
-            <button class="delete-btn" onclick="deleteType(${t.id})">Удалить</button>
+            <div>
+                <a href="#" onclick="showType(${t.id})">${t.name}</a>
+            </div>
+            ${isAdmin ? `<button class="delete-btn" onclick="deleteType(${t.id})">Удалить</button>` : ''}
         `;
         list.appendChild(div);
     });
@@ -80,14 +173,16 @@ function renderTypes() {
 
 function toggleAdmin() {
     const admin = document.getElementById('admin-section');
-    admin.classList.toggle('hidden');
+    admin.style.display = admin.style.display === 'block' ? 'none' : 'block';
 }
 
 function loginAdmin() {
     const input = document.getElementById('admin-password').value;
     if (input === password) {
-        document.getElementById('admin-login').classList.add('hidden');
-        document.getElementById('admin-panel').classList.remove('hidden');
+        isAdmin = true;
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        renderTypes();
     } else {
         alert('Неверный пароль!');
     }
