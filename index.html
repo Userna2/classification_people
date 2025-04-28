@@ -58,8 +58,7 @@ const password = "admin123";
 
 // Пытаемся загрузить сохранённые типы
 let types = JSON.parse(localStorage.getItem('types')) || [
-    { id: 1, name: "Экстраверт", description: "Общительный и энергичный человек." },
-    { id: 2, name: "Интроверт", description: "Предпочитает уединение и глубокое размышление." }
+
 ];
 
 function saveTypes() {
