@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <meta charset="UTF-8">
@@ -238,6 +239,15 @@ function saveTypes() {
     database.ref('types').set(typesObject);
 }
 
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function renderTypes(filter = '') {
     console.log('Рендеринг типов, isAdmin:', isAdmin);
     const list = document.getElementById('types-list');
@@ -253,13 +263,13 @@ function renderTypes(filter = '') {
         div.setAttribute('data-id', t.id);
         div.innerHTML = `
             <div class="type-header">
-                <div class="type-name">${t.name}</div>
+                <div class="type-name">${escapeHtml(t.name)}</div>
                 ${isAdmin ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteType(${t.id})">Удалить</button>` : ''}
-            </div>
-            <div class="type-content" id="content-${t.id}">
-                <p>${t.description}</p>
-                ${t.image ? `<img src="${t.image}" alt="${t.name}">` : ''}
-            </div>
+                </div>
+                <div class="type-content" id="content-${t.id}">
+                    <p>${escapeHtml(t.description)}</p>
+                    ${t.image ? `<img src="${escapeHtml(t.image)}" alt="${escapeHtml(t.name)}">` : ''}
+                </div>
         `;
         div.addEventListener('click', function() {
             toggleTypeContent(t.id);
@@ -289,33 +299,40 @@ function toggleAdmin() {
     admin.classList.toggle('hidden');
 }
 
+// Замените вашу функцию loginAdmin на это:
 function loginAdmin() {
-    const input = document.getElementById('admin-password').value;
-    const inputHash = CryptoJS.SHA256(input).toString(CryptoJS.enc.Hex);
-    console.log('Введённый пароль (хэш):', inputHash);
+    const email = "kolaesaev@email.com"; // или добавьте поле для ввода email
+    const password = document.getElementById('admin-password').value;
     
-    database.ref('admin/credentials/passwordHash').once('value')
-        .then(snapshot => {
-            const storedHash = snapshot.val();
-            if (inputHash === storedHash) {
-                console.log('Пароль верный, установка isAdmin = true');
-                isAdmin = true;
-                document.getElementById('admin-login').classList.add('hidden');
-                document.getElementById('admin-panel').classList.remove('hidden');
-                document.getElementById('open-admin-btn').style.display = 'block';
-                document.getElementById('admin-login-btn').classList.add('hidden');
-                console.log('isAdmin после входа:', isAdmin);
-                renderTypes();
-            } else {
-                console.log('Неверный пароль (хэш):', inputHash);
-                alert('Неверный пароль!');
-            }
+    firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            isAdmin = true;
+            document.getElementById('admin-login').classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            document.getElementById('open-admin-btn').style.display = 'block';
+            document.getElementById('admin-login-btn').classList.add('hidden');
+            renderTypes();
         })
-        .catch(error => {
-            console.error('Ошибка загрузки пароля:', error);
-            alert('Ошибка сервера. Попробуйте позже.');
+        .catch((error) => {
+            console.error("Ошибка входа:", error);
+            alert("Неверный пароль или ошибка входа!");
         });
 }
+
+// Добавьте обработчик состояния аутентификации
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        isAdmin = true;
+        document.getElementById('admin-login').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        document.getElementById('open-admin-btn').style.display = 'block';
+        document.getElementById('admin-login-btn').classList.add('hidden');
+        renderTypes();
+    } else {
+        isAdmin = false;
+        // Обновите UI для не-админа
+    }
+});
 
 function addType() {
     if (!isAdmin) {
